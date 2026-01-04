@@ -136,6 +136,102 @@ mohler/
 | 7 | Generate Server | Ready |
 | 8 | Generate WP Plugin | Ready |
 
+## Deployment (Google Cloud Run)
+
+The API is designed for deployment on Google Cloud Run for automatic scaling and cost efficiency.
+
+### Prerequisites
+
+1. [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed
+2. A GCP project with billing enabled
+3. Cloud Run API enabled
+
+### Initial Setup
+
+```bash
+# Authenticate with GCP
+gcloud auth login
+
+# Set your project
+gcloud config set project YOUR_PROJECT_ID
+
+# Enable required APIs
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+```
+
+### Deploy
+
+```bash
+# Deploy to Cloud Run (from project root)
+gcloud run deploy mohler-search \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars "OPENAI_API_KEY=your-key,PINECONE_API_KEY=your-key"
+```
+
+Or use Secret Manager for API keys (recommended):
+
+```bash
+# Create secrets
+echo -n "your-openai-key" | gcloud secrets create openai-api-key --data-file=-
+echo -n "your-pinecone-key" | gcloud secrets create pinecone-api-key --data-file=-
+
+# Deploy with secrets
+gcloud run deploy mohler-search \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-secrets "OPENAI_API_KEY=openai-api-key:latest,PINECONE_API_KEY=pinecone-api-key:latest"
+```
+
+### Environment Variables
+
+Set these in Cloud Run:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | OpenAI API key for embeddings |
+| `PINECONE_API_KEY` | Yes | Pinecone API key |
+| `API_KEY_POC` | No | API key for search UI |
+| `API_KEY_WORDPRESS` | No | API key for WordPress plugin |
+| `ADMIN_USERNAME` | No | Admin dashboard username |
+| `ADMIN_PASSWORD` | No | Admin dashboard password |
+
+### Estimated Costs
+
+- **Under 2M requests/month**: Free tier covers it
+- **2-3M requests/month**: ~$15-25/month
+
+Cloud Run scales to zero when not in use, so you only pay for actual usage.
+
+## Local Development
+
+Run the server locally for testing:
+
+```bash
+# Generate server files first
+cd scripts && python 07_local_POC_v1.py
+
+# Start the server
+cd ../server
+python app.py
+
+# Open http://localhost:5007
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Search interface |
+| `/admin` | GET | Admin dashboard (requires auth) |
+| `/api/v1/health` | GET | Health check |
+| `/api/v1/search` | POST | Search transcripts |
+| `/api/v1/summarize` | POST | AI summary of results |
+| `/api/v1/stats` | GET | Index statistics |
+
 ## License
 
 Private repository.

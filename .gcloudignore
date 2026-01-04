@@ -1,0 +1,44 @@
+# .gcloudignore - Files to exclude from Cloud Run deployment
+# This keeps the deployed container small and fast
+
+# Git
+.git/
+.gitignore
+
+# Environment (secrets are set via Cloud Run environment variables)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+*.egg-info/
+
+# Data files (large, not needed for API)
+data/
+logs/
+
+# Pipeline scripts (only needed for data processing, not serving)
+scripts/
+
+# WordPress plugin (deployed separately)
+wp-plugin/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+README.md
+*.md
+
+# Local development
+server/data/analytics.db
