@@ -232,6 +232,42 @@ python app.py
 | `/api/v1/summarize` | POST | AI summary of results |
 | `/api/v1/stats` | GET | Index statistics |
 
+## Automated Daily Updates (GitHub Actions)
+
+The repository includes a GitHub Actions workflow that automatically checks for new videos and updates the search index daily at 2:00 AM Central Time.
+
+### Setup
+
+1. Go to your repository settings: `Settings → Secrets and variables → Actions`
+
+2. Add these repository secrets:
+   | Secret | Description |
+   |--------|-------------|
+   | `YOUTUBE_API_KEY` | YouTube Data API v3 key |
+   | `OPENAI_API_KEY` | OpenAI API key for embeddings |
+   | `PINECONE_API_KEY` | Pinecone API key |
+   | `WEBSHARE_PROXY_USERNAME` | Webshare proxy username |
+   | `WEBSHARE_PROXY_PASSWORD` | Webshare proxy password |
+
+3. The workflow will run automatically. You can also trigger it manually from the Actions tab.
+
+### What It Does
+
+Each day at 2am:
+1. Checks for new videos on the channel
+2. Extracts transcripts for new videos
+3. Chunks the transcripts
+4. Generates embeddings via OpenAI
+5. Uploads new vectors to Pinecone
+
+Pipeline state is preserved between runs using GitHub Artifacts.
+
+### Monitoring
+
+- View workflow runs: `Actions` tab in GitHub
+- Check logs for any failures
+- Manual trigger available via "Run workflow" button
+
 ## License
 
 Private repository.
