@@ -82,7 +82,7 @@ except ImportError as e:
 
 APP_PY_TEMPLATE = '''"""
 {project_name} - YouTube Semantic Search API
-{'=' * (len(project_name) + 35)}
+============================================================
 
 Flask server for semantic search across {channel_display_name}'s YouTube transcripts.
 
@@ -647,7 +647,7 @@ def summarize_results():
                     "content": (
                         "You are a helpful assistant summarizing content from "
                         "{channel_display_name}'s YouTube videos. Synthesize the provided "
-                        "transcript excerpts into a clear, informative answer of 100-150 words. "
+                        "transcript excerpts into a clear, informative answer of 150-200 words. "
                         "Mention which videos discuss the topic. Be accurate and faithful to "
                         "what was actually said."
                     )
@@ -657,25 +657,29 @@ def summarize_results():
                     "content": f"Question: {{query}}\\n\\nVideo transcript excerpts:\\n\\n{{context}}"
                 }}
             ],
-            max_tokens=250,
+            max_tokens=400,
             temperature=0.3
         )
-        
+
         summary = response.choices[0].message.content
-        
-        # Get unique sources
+
+        # Get all sources with details
         sources = []
-        seen_titles = set()
+        seen_videos = set()
         for r in top_results:
-            title = r.get('video_title', '')
-            if title and title not in seen_titles:
-                sources.append(title)
-                seen_titles.add(title)
-        
+            video_id = r.get('video_id', '')
+            if video_id and video_id not in seen_videos:
+                sources.append({{
+                    'title': r.get('video_title', ''),
+                    'timestamp': r.get('start_timestamp', '0:00'),
+                    'url': r.get('youtube_url', '')
+                }})
+                seen_videos.add(video_id)
+
         result_data = {{
             'query': query,
             'summary': summary,
-            'sources': sources[:3],
+            'sources': sources,
             'sources_count': len(top_results),
             'cached': False
         }}
@@ -933,12 +937,14 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
     <title>{channel_display_name} - YouTube Search</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {{
-            --primary: #1a56db;
-            --primary-dark: #1e40af;
-            --bg-light: #f8fafc;
+            --primary: #1e3a5f;
+            --primary-dark: #162d4a;
+            --accent-gold: #c9a227;
+            --accent-gold-dark: #b08f1f;
+            --bg-light: #f5f5f3;
             --bg-white: #ffffff;
             --text-dark: #1e293b;
             --text-gray: #64748b;
@@ -950,7 +956,7 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 
         body {{
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-light);
             color: var(--text-dark);
             min-height: 100vh;
@@ -965,14 +971,15 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
 
         .header h1 {{
-            font-size: 2rem;
-            font-weight: 700;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 2.5rem;
+            font-weight: 600;
             margin-bottom: 10px;
-            color: var(--text-dark);
+            color: var(--primary);
         }}
 
         .header h1 .yt-icon {{
-            color: var(--youtube-red);
+            color: var(--accent-gold);
         }}
 
         .header p {{
@@ -995,10 +1002,10 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
 
         .search-input {{
             flex: 1;
-            padding: 14px 18px;
+            padding: 14px 20px;
             font-size: 16px;
             border: 2px solid var(--border);
-            border-radius: 8px;
+            border-radius: 9999px;
             transition: border-color 0.2s;
         }}
 
@@ -1008,13 +1015,13 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
 
         .search-button {{
-            padding: 14px 32px;
+            padding: 14px 36px;
             font-size: 15px;
             font-weight: 600;
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 9999px;
             cursor: pointer;
             transition: background 0.2s;
         }}
@@ -1052,16 +1059,18 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
         @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 
         .ai-summary {{
-            background: linear-gradient(135deg, #f0f9ff 0%, #fff 100%);
-            border: 1px solid #bae6fd;
-            border-left: 4px solid var(--primary);
+            background: linear-gradient(135deg, #faf8f0 0%, #fff 100%);
+            border: 1px solid #e8e4d4;
+            border-left: 4px solid var(--accent-gold);
             padding: 20px;
             border-radius: 0 8px 8px 0;
             margin-bottom: 25px;
         }}
 
         .ai-summary-header {{
+            font-family: 'Cormorant Garamond', Georgia, serif;
             font-weight: 600;
+            font-size: 1.1rem;
             color: var(--primary);
             margin-bottom: 10px;
             display: flex;
@@ -1165,16 +1174,18 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
 
         .result-title {{
+            font-family: 'Cormorant Garamond', Georgia, serif;
             font-weight: 600;
-            color: var(--text-dark);
+            font-size: 1.1rem;
+            color: var(--primary);
         }}
 
         .result-timestamp {{
             font-size: 0.85rem;
-            color: var(--primary);
-            background: #eff6ff;
-            padding: 3px 8px;
-            border-radius: 4px;
+            color: var(--accent-gold-dark);
+            background: #faf8f0;
+            padding: 3px 10px;
+            border-radius: 9999px;
         }}
 
         .result-score {{
@@ -1223,14 +1234,15 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
             padding: 12px 30px;
             background: var(--bg-white);
             border: 2px solid var(--border);
-            border-radius: 8px;
+            border-radius: 9999px;
             cursor: pointer;
             font-weight: 500;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background 0.2s;
         }}
 
         .load-more-btn:hover {{
             border-color: var(--primary);
+            background: #faf8f0;
         }}
     </style>
 </head>
@@ -1381,11 +1393,13 @@ INDEX_HTML_TEMPLATE = '''<!DOCTYPE html>
                     return;
                 }}
 
-                const sources = data.sources.slice(0, 2).map(s => s.length > 40 ? s.slice(0, 40) + '...' : s).join(', ');
+                const sourcesList = data.sources.map(s =>
+                    `<li><a href="${{s.url}}" target="_blank" style="color: var(--primary); text-decoration: none;">${{escapeHtml(s.title)}}</a> <span style="color: var(--accent-gold-dark);">({{s.timestamp}})</span></li>`
+                ).join('');
                 container.innerHTML = `
                     <div class="ai-summary-header">✨ AI Summary</div>
                     <div class="ai-summary-text">${{escapeHtml(data.summary)}}</div>
-                    <div class="ai-summary-sources"><strong>From:</strong> ${{escapeHtml(sources)}}</div>
+                    <div class="ai-summary-sources"><strong>Sources:</strong><ul style="margin: 8px 0 0 20px; list-style: disc;">${{sourcesList}}</ul></div>
                 `;
             }} catch (e) {{
                 container.remove();
