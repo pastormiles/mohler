@@ -247,6 +247,11 @@
             font-weight: 600;
             font-size: 1.1rem;
             color: var(--primary);
+            text-decoration: none;
+        }
+
+        .result-title:hover {
+            text-decoration: underline;
         }
 
         .result-timestamp {
@@ -447,7 +452,7 @@
                 const text = r.text.length > 250 ? r.text.slice(0, 250) + '...' : r.text;
                 html += `<div class="result-item">
                     <div class="result-header">
-                        <span class="result-title">${escapeHtml(r.video_title)}</span>
+                        <a href="${r.youtube_url}" target="_blank" class="result-title">${escapeHtml(r.video_title)}</a>
                         <span class="result-timestamp">${r.start_timestamp} - ${r.end_timestamp}</span>
                         <span class="result-score">${score}% match</span>
                     </div>
