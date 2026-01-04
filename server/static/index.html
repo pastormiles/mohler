@@ -347,27 +347,27 @@
 
         let currentQuery = '';
         let currentResults = [];
+        let currentData = null;
         let displayCount = 10;
 
-        async function performSearch(loadMore = false) {
-            const query = loadMore ? currentQuery : searchInput.value.trim();
+        async function performSearch() {
+            const query = searchInput.value.trim();
             if (!query) return;
 
             currentQuery = query;
-            if (!loadMore) {
-                displayCount = 10;
-                resultsDiv.innerHTML = '';
-                loadMoreDiv.style.display = 'none';
-            }
+            displayCount = 10;
+            resultsDiv.innerHTML = '';
+            loadMoreDiv.style.display = 'none';
 
             loadingDiv.classList.add('active');
             searchBtn.disabled = true;
 
             try {
+                // Fetch 30 results upfront (max we'll show)
                 const res = await fetch('/api/v1/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, top_k: displayCount + 5 })
+                    body: JSON.stringify({ query, top_k: 30 })
                 });
 
                 const data = await res.json();
@@ -385,9 +385,10 @@
                 }
 
                 currentResults = data.results;
-                displayResults(data);
+                currentData = data;
+                displayResults();
 
-                loadMoreDiv.style.display = data.results.length >= displayCount && displayCount < 30 ? 'block' : 'none';
+                loadMoreDiv.style.display = currentResults.length > displayCount ? 'block' : 'none';
             } catch (e) {
                 loadingDiv.classList.remove('active');
                 searchBtn.disabled = false;
@@ -395,19 +396,31 @@
             }
         }
 
-        function displayResults(data) {
+        function loadMoreResults() {
+            displayCount += 10;
+            displayResults(true);  // true = isLoadMore, preserves summary
+            loadMoreDiv.style.display = currentResults.length > displayCount ? 'block' : 'none';
+        }
+
+        let summaryHtml = '';  // Cache the AI summary HTML
+
+        function displayResults(isLoadMore = false) {
             let html = '';
 
-            // AI Summary placeholder
-            html += `<div id="ai-summary" class="ai-summary">
-                <div class="ai-summary-header">✨ AI Summary</div>
-                <div class="loading active" style="padding:10px">Generating...</div>
-            </div>`;
+            // AI Summary - use cached version if loading more, otherwise show placeholder
+            if (isLoadMore && summaryHtml) {
+                html += summaryHtml;
+            } else {
+                html += `<div id="ai-summary" class="ai-summary">
+                    <div class="ai-summary-header">✨ AI Summary</div>
+                    <div class="loading active" style="padding:10px">Generating...</div>
+                </div>`;
+            }
 
             // Video thumbnails
             const videos = [];
             const seen = new Set();
-            for (const r of data.results) {
+            for (const r of currentResults) {
                 if (!seen.has(r.video_id) && r.thumbnail_url) {
                     videos.push(r);
                     seen.add(r.video_id);
@@ -427,9 +440,9 @@
                 html += '</div>';
             }
 
-            html += `<div class="results-header">Found ${data.count} segments from ${data.unique_videos} videos</div>`;
+            html += `<div class="results-header">Found ${currentData.count} segments from ${currentData.unique_videos} videos</div>`;
 
-            for (const r of data.results.slice(0, displayCount)) {
+            for (const r of currentResults.slice(0, displayCount)) {
                 const score = (r.score * 100).toFixed(0);
                 const text = r.text.length > 250 ? r.text.slice(0, 250) + '...' : r.text;
                 html += `<div class="result-item">
@@ -444,7 +457,11 @@
             }
 
             resultsDiv.innerHTML = html;
-            generateSummary(data.query, currentResults);
+
+            // Only generate summary on initial search, not on load more
+            if (!isLoadMore) {
+                generateSummary(currentQuery, currentResults);
+            }
         }
 
         async function generateSummary(query, results) {
@@ -465,11 +482,14 @@
                 const sourcesList = data.sources.map(s =>
                     `<li><a href="${s.url}" target="_blank" style="color: var(--primary); text-decoration: none;">${escapeHtml(s.title)}</a> <span style="color: var(--accent-gold-dark);">(${s.timestamp})</span></li>`
                 ).join('');
-                container.innerHTML = `
+                const summaryContent = `
                     <div class="ai-summary-header">✨ AI Summary</div>
                     <div class="ai-summary-text">${escapeHtml(data.summary)}</div>
                     <div class="ai-summary-sources"><strong>Sources:</strong><ul style="margin: 8px 0 0 20px; list-style: disc;">${sourcesList}</ul></div>
                 `;
+                container.innerHTML = summaryContent;
+                // Cache the summary HTML for load more
+                summaryHtml = `<div id="ai-summary" class="ai-summary">${summaryContent}</div>`;
             } catch (e) {
                 container.remove();
             }
@@ -481,14 +501,11 @@
             return div.innerHTML;
         }
 
-        searchBtn.addEventListener('click', () => performSearch(false));
+        searchBtn.addEventListener('click', () => performSearch());
         searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') performSearch(false);
+            if (e.key === 'Enter') performSearch();
         });
-        loadMoreBtn.addEventListener('click', () => {
-            displayCount += 10;
-            performSearch(true);
-        });
+        loadMoreBtn.addEventListener('click', loadMoreResults);
     </script>
 </body>
 </html>
