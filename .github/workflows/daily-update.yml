@@ -1,0 +1,141 @@
+name: Daily Video Update
+
+on:
+  schedule:
+    # Run at 2:00 AM Central Time (8:00 AM UTC)
+    # Adjust for daylight saving: CST = UTC-6, CDT = UTC-5
+    - cron: '0 8 * * *'
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  update-videos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hour max for large batches
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create data directories
+        run: |
+          mkdir -p data/video_ids data/metadata data/transcripts data/chunks data/embeddings logs
+
+      - name: Download existing data from artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: pipeline-data
+          path: data/
+          if_no_artifact_found: warn
+        continue-on-error: true
+
+      - name: Check for new videos
+        id: check-new
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          cd scripts
+          python 01_extract_video_ids_v3.py --incremental
+
+          # Count new videos
+          NEW_COUNT=$(python -c "
+          import json
+          from pathlib import Path
+          ids_file = Path('../data/video_ids/video_ids.json')
+          if ids_file.exists():
+              data = json.load(open(ids_file))
+              print(len(data.get('video_ids', [])))
+          else:
+              print(0)
+          ")
+          echo "new_videos=$NEW_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Fetch metadata for new videos
+        if: steps.check-new.outputs.new_videos != '0'
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          cd scripts
+          python 02_fetch_video_metadata_v3.py --incremental
+
+      - name: Extract transcripts
+        if: steps.check-new.outputs.new_videos != '0'
+        env:
+          WEBSHARE_PROXY_USERNAME: ${{ secrets.WEBSHARE_PROXY_USERNAME }}
+          WEBSHARE_PROXY_PASSWORD: ${{ secrets.WEBSHARE_PROXY_PASSWORD }}
+        run: |
+          cd scripts
+          python 03_extract_transcripts_v10.py --incremental
+
+      - name: Chunk transcripts
+        if: steps.check-new.outputs.new_videos != '0'
+        run: |
+          cd scripts
+          python 04_chunk_transcripts_v2.py --incremental
+
+      - name: Generate embeddings
+        if: steps.check-new.outputs.new_videos != '0'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd scripts
+          python 05_generate_embeddings_v2.py --incremental
+
+      - name: Upload to Pinecone
+        if: steps.check-new.outputs.new_videos != '0'
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          cd scripts
+          python 06_upload_to_pinecone_v2.py --incremental
+
+      - name: Save pipeline data as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-data
+          path: |
+            data/video_ids/
+            data/metadata/
+            data/transcripts/*.json
+            data/chunks/
+            data/embeddings/
+          retention-days: 30
+
+      - name: Generate summary
+        id: summary
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+
+          # Count stats
+          transcripts = list(Path('data/transcripts').glob('*.json'))
+          chunks_file = Path('data/chunks/all_chunks.json')
+
+          stats = {
+              'transcripts': len(transcripts),
+              'chunks': 0
+          }
+
+          if chunks_file.exists():
+              data = json.load(open(chunks_file))
+              stats['chunks'] = data.get('total_chunks', len(data.get('chunks', [])))
+
+          print(f\"Total transcripts: {stats['transcripts']}\")
+          print(f\"Total chunks: {stats['chunks']}\")
+          "
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Daily update pipeline failed. Check logs for details."
