@@ -1,0 +1,16 @@
+# =============================================================================
+# YouTube AI Search Server - Dependencies
+# =============================================================================
+# Use this file when deploying ONLY the server to production
+# (The main requirements.txt includes everything for local development)
+# =============================================================================
+
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.0.0
+openai>=1.0.0
+pinecone>=5.0.0
+python-dotenv>=1.0.0
+
+# For GCP deployment (optional - uncomment if using Secret Manager)
+# google-cloud-secret-manager>=2.0.0

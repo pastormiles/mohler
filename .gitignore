@@ -1,0 +1,31 @@
+# Environment
+.env
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Data (large files)
+data/transcripts/*.json
+data/chunks/*.json
+data/embeddings/*.json
+
+# Keep directory structure
+!data/transcripts/.gitkeep
+!data/chunks/.gitkeep
+!data/embeddings/.gitkeep
+
+# Server data
+server/data/analytics.db
+
+# Logs
+logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
