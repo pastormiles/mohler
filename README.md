@@ -206,6 +206,41 @@ Set these in Cloud Run:
 
 Cloud Run scales to zero when not in use, so you only pay for actual usage.
 
+## Deployment (Render - Free Tier)
+
+Render offers a free tier perfect for testing and low-traffic usage.
+
+### Quick Deploy
+
+1. Go to [render.com](https://render.com) and sign up/log in
+2. Click **New** → **Web Service**
+3. Connect your GitHub repository
+4. Render will auto-detect the Dockerfile
+5. Configure settings:
+   - **Name**: `mohler-search`
+   - **Region**: Oregon (US West)
+   - **Instance Type**: Free
+6. Add environment variables:
+   - `OPENAI_API_KEY` - Your OpenAI API key
+   - `PINECONE_API_KEY` - Your Pinecone API key
+7. Click **Deploy**
+
+### Blueprint Deploy (Alternative)
+
+Use the included `render.yaml` for one-click deployment:
+
+1. Go to [render.com/deploy](https://render.com/deploy)
+2. Enter your repository URL
+3. Render will use `render.yaml` to configure the service
+4. Add your API keys when prompted
+
+### Free Tier Limitations
+
+- Service spins down after 15 minutes of inactivity
+- First request after spin-down takes ~30 seconds (cold start)
+- 750 hours/month of compute time
+- Good for testing and demos
+
 ## Local Development
 
 Run the server locally for testing:

@@ -1,0 +1,35 @@
+# Render Blueprint - Albert Mohler YouTube Semantic Search
+# https://render.com/docs/blueprint-spec
+#
+# Two deployment options:
+#
+# Option 1: Docker (recommended - uses existing Dockerfile)
+# Option 2: Manual setup via Render dashboard
+#
+# For Docker deployment, connect your GitHub repo and Render will
+# auto-detect the Dockerfile.
+
+services:
+  - type: web
+    name: mohler-search
+    runtime: docker
+    region: oregon
+    plan: free
+
+    # Uses Dockerfile in repo root
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # Health check
+    healthCheckPath: /api/v1/health
+
+    # Environment variables (set in Render dashboard)
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually in dashboard
+      - key: PINECONE_API_KEY
+        sync: false  # Set manually in dashboard
+      - key: API_KEY_POC
+        sync: false  # Optional: protect search UI
+      - key: API_KEY_WORDPRESS
+        sync: false  # Optional: for WP plugin
