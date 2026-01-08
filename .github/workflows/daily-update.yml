@@ -45,59 +45,60 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           cd scripts
-          python 01_extract_video_ids_v3.py --incremental
+          python 01_extract_video_ids_v3.py
 
-          # Count new videos
-          NEW_COUNT=$(python -c "
+          # Count videos found
+          VIDEO_COUNT=$(python -c "
           import json
           from pathlib import Path
-          ids_file = Path('../data/video_ids/video_ids.json')
+          ids_file = Path('../data/video_ids/all_video_ids.json')
           if ids_file.exists():
               data = json.load(open(ids_file))
-              print(len(data.get('video_ids', [])))
+              print(len(data.get('videos', [])))
           else:
               print(0)
           ")
-          echo "new_videos=$NEW_COUNT" >> $GITHUB_OUTPUT
+          echo "video_count=$VIDEO_COUNT" >> $GITHUB_OUTPUT
+          echo "Found $VIDEO_COUNT videos"
 
-      - name: Fetch metadata for new videos
-        if: steps.check-new.outputs.new_videos != '0'
+      - name: Fetch metadata
+        if: steps.check-new.outputs.video_count != '0'
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           cd scripts
-          python 02_fetch_video_metadata_v3.py --incremental
+          python 02_fetch_video_metadata_v3.py
 
       - name: Extract transcripts
-        if: steps.check-new.outputs.new_videos != '0'
+        if: steps.check-new.outputs.video_count != '0'
         env:
           WEBSHARE_PROXY_USERNAME: ${{ secrets.WEBSHARE_PROXY_USERNAME }}
           WEBSHARE_PROXY_PASSWORD: ${{ secrets.WEBSHARE_PROXY_PASSWORD }}
         run: |
           cd scripts
-          python 03_extract_transcripts_v10.py --incremental
+          python 03_extract_transcripts_v10.py
 
       - name: Chunk transcripts
-        if: steps.check-new.outputs.new_videos != '0'
+        if: steps.check-new.outputs.video_count != '0'
         run: |
           cd scripts
-          python 04_chunk_transcripts_v2.py --incremental
+          python 04_chunk_transcripts_v2.py
 
       - name: Generate embeddings
-        if: steps.check-new.outputs.new_videos != '0'
+        if: steps.check-new.outputs.video_count != '0'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd scripts
-          python 05_generate_embeddings_v2.py --incremental
+          python 05_generate_embeddings_v2.py
 
       - name: Upload to Pinecone
-        if: steps.check-new.outputs.new_videos != '0'
+        if: steps.check-new.outputs.video_count != '0'
         env:
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
         run: |
           cd scripts
-          python 06_upload_to_pinecone_v2.py --incremental
+          python 06_upload_to_pinecone_v2.py
 
       - name: Save pipeline data as artifact
         uses: actions/upload-artifact@v4
