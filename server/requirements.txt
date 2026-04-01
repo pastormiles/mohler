@@ -12,5 +12,8 @@ openai>=1.0.0
 pinecone>=5.0.0
 python-dotenv>=1.0.0
 
-# For GCP deployment (optional - uncomment if using Secret Manager)
-# google-cloud-secret-manager>=2.0.0
+# For GCP deployment
+google-cloud-firestore>=2.0.0
+
+# For GitHub API calls
+requests>=2.31.0

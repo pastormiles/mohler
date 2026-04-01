@@ -38,4 +38,7 @@ flask-cors>=4.0.0
 # Production WSGI server
 gunicorn>=21.0.0
 
+# Cloud services
+google-cloud-firestore>=2.0.0
+
 # Note: openai and pinecone already included above

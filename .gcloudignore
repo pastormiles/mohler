@@ -42,3 +42,11 @@ README.md
 
 # Local development
 server/data/analytics.db
+
+# Planning/screenshots
+_preplanning/
+*.png
+*.jpg
+
+# Claude Code
+.claude/
